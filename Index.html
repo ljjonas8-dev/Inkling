@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="OriNotes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1024">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233b82f6'/%3E%3Cstop offset='1' stop-color='%237c3aed'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='url(%23g)'/%3E%3Ctext x='50' y='70' font-size='62' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3EO%3C/text%3E%3C/svg%3E">
+<title>OriNotes</title>
+<style>
+  :root {
+    --blue: #3b82f6;
+    --purple: #7c3aed;
+    --bg: #0f1024;
+    --panel: #171836;
+    --hover: #26286a;
+    --border: #3b3f7a;
+    --text: #e8e9ff;
+    --accent: linear-gradient(135deg, #3b82f6, #7c3aed);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; font-family: -apple-system, system-ui, sans-serif;
+    background: var(--bg); color: var(--text); overflow: hidden;
+  }
+
+  /* Seitenleiste */
+  aside {
+    width: 280px; background: var(--panel); padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+    padding-top: max(16px, env(safe-area-inset-top));
+    border-right: 1px solid var(--border); flex-shrink: 0; z-index: 100;
+  }
+  h1 {
+    margin: 0 0 6px; font-size: 1.6rem;
+    background: var(--accent); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer; border: none; border-radius: 10px; padding: 11px 14px;
+    color: white; background: var(--accent); font-size: 0.95rem; font-weight: 500;
+    min-height: 44px; text-align: center; font-family: inherit;
+  }
+  .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn:disabled { opacity: 0.4; }
+  .row { display: flex; gap: 8px; }
+  .row .btn { flex: 1; }
+
+  #pageList { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+  .page-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px; border-radius: 10px; cursor: pointer; min-height: 44px;
+  }
+  .page-item:hover, .page-item.active { background: var(--hover); }
+  .page-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .page-item input[type=checkbox] {
+    width: 22px; height: 22px; accent-color: var(--purple); flex-shrink: 0;
+  }
+  .hint { font-size: 0.8rem; opacity: 0.6; text-align: center; }
+
+  /* Hauptbereich */
+  main {
+    flex: 1; display: flex; flex-direction: column; padding: 20px; gap: 12px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    min-width: 0;
+  }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  #saveStatus { margin-left: auto; font-size: 0.85rem; opacity: 0.6; }
+  #menuBtn { display: none; }
+  input#title {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; padding: 12px; font-size: 1.3rem; font-weight: 600; width: 100%;
+  }
+  .alphabet { display: flex; flex-wrap: wrap; gap: 6px; }
+  .alphabet button {
+    cursor: pointer; border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); border-radius: 8px; min-width: 40px; min-height: 40px;
+    font-size: 1rem; font-family: inherit;
+  }
+  .alphabet button:active { background: var(--purple); }
+  textarea {
+    flex: 1; background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; padding: 14px; font-size: 1.1rem; resize: none; font-family: inherit;
+    line-height: 1.5; width: 100%;
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--purple); }
+  #importFile { display: none; }
+
+  /* Kleine Bildschirme / iPad Hochformat */
+  @media (max-width: 820px) {
+    aside {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      transform: translateX(-105%); transition: transform 0.25s ease;
+      box-shadow: 8px 0 30px rgba(0,0,0,0.5);
+    }
+    aside.open { transform: translateX(0); }
+    main { padding: 14px; }
+    #menuBtn { display: inline-flex; }
+  }
+</style>
+</head>
+<body>
+<aside id="sidebar">
+  <h1>OriNotes</h1>
+  <button id="newPage" class="btn" type="button">+ Neue Seite</button>
+
+  <div class="row">
+    <button id="selectAll" class="btn ghost" type="button">Alle wählen</button>
+    <label class="btn ghost">
+      Import
+      <input type="file" id="importFile" accept=".orignotes,application/json" multiple>
+    </label>
+  </div>
+
+  <button id="exportSelected" class="btn" type="button" disabled>Ausgewählte exportieren (0)</button>
+
+  <div id="pageList"></div>
+  <div class="hint">Häkchen setzen, um mehrere Seiten einzeln als .orignotes zu exportieren</div>
+</aside>
+
+<main>
+  <div class="toolbar">
+    <button id="menuBtn" class="btn ghost" type="button">☰ Seiten</button>
+    <button id="exportCurrent" class="btn" type="button">Diese Seite exportieren</button>
+    <button id="deletePage" class="btn ghost" type="button">Löschen</button>
+    <span id="saveStatus"></span>
+  </div>
+  <input id="title" placeholder="Titel">
+  <div class="alphabet" id="alphabet"></div>
+  <textarea id="content" placeholder="Schreib hier..."></textarea>
+</main>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const alphabetEl = $('alphabet');
+  const listEl = $('pageList');
+  const titleEl = $('title');
+  const contentEl = $('content');
+
+  let pages = [];
+  try {
+    pages = JSON.parse(localStorage.getItem('orinotes') || '[]');
+    if (!Array.isArray(pages)) pages = [];
+  } catch { pages = []; }
+
+  let current = null;
+  let selected = new Set();
+
+  function makeId() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+  }
+
+  // Deutsches Alphabet inkl. Umlaute und ß
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜabcdefghijklmnopqrstuvwxyzäöüß'.split('').forEach(ch => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = ch;
+    b.onclick = () => insertAtCursor(ch);
+    alphabetEl.appendChild(b);
+  });
+
+  function insertAtCursor(text) {
+    contentEl.setRangeText(text, contentEl.selectionStart, contentEl.selectionEnd, 'end');
+    contentEl.focus();
+    saveCurrent();
+  }
+
+  function save() {
+    try { localStorage.setItem('orinotes', JSON.stringify(pages)); } catch {}
+  }
+
+  function saveCurrent() {
+    if (!current) return;
+    current.title = titleEl.value;
+    current.content = contentEl.value;
+    current.updated = new Date().toISOString();
+    save();
+    $('saveStatus').textContent = 'Gespeichert ✓';
+    renderList();
+  }
+
+  function renderList() {
+    listEl.innerHTML = '';
+    pages.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'page-item' + (p === current ? ' active' : '');
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = selected.has(p.id);
+      cb.onclick = e => {
+        e.stopPropagation();
+        if (cb.checked) selected.add(p.id); else selected.delete(p.id);
+        updateButtons();
+      };
+
+      const label = document.createElement('span');
+      label.textContent = p.title || 'Ohne Titel';
+
+      row.append(cb, label);
+      row.onclick = () => openPage(p);
+      listEl.appendChild(row);
+    });
+    updateButtons();
+  }
+
+  function updateButtons() {
+    const n = selected.size;
+    $('exportSelected').textContent = 'Ausgewählte exportieren (' + n + ')';
+    $('exportSelected').disabled = n === 0;
+    $('selectAll').textContent = (n === pages.length && n > 0) ? 'Keine wählen' : 'Alle wählen';
+  }
+
+  function openPage(p) {
+    current = p;
+    titleEl.value = p.title;
+    contentEl.value = p.content;
+    if (window.innerWidth <= 820) $('sidebar').classList.remove('open');
+    renderList();
+  }
+
+  titleEl.oninput = saveCurrent;
+  contentEl.oninput = saveCurrent;
+
+  $('menuBtn').onclick = () => $('sidebar').classList.toggle('open');
+
+  $('newPage').onclick = () => {
+    const now = new Date().toISOString();
+    const p = { id: makeId(), title: 'Neue Seite', content: '', created: now, updated: now };
+    pages.push(p);
+    save();
+    openPage(p);
+  };
+
+  $('selectAll').onclick = () => {
+    if (selected.size === pages.length && pages.length > 0) selected.clear();
+    else pages.forEach(p => selected.add(p.id));
+    renderList();
+  };
+
+  // ---------- Export als .orignotes ----------
+
+  function toDocument(p) {
+    return {
+      format: 'orignotes',
+      version: 2,
+      page: {
+        id: p.id,
+        title: p.title,
+        content: p.content,
+        created: p.created,
+        updated: p.updated
+      }
+    };
+  }
+
+  function safeName(s) {
+    return (s || 'Ohne Titel').replace(/[\\/:*?"<>|]/g, '_').trim() || 'seite';
+  }
+
+  function downloadFile(filename, data) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // Jede Seite wird als eigene .orignotes-Datei gespeichert
+  async function exportPages(list) {
+    if (!list.length) return alert('Keine Seiten ausgewählt.');
+    const used = new Map();
+    for (const p of list) {
+      const base = safeName(p.title);
+      const count = used.get(base) || 0;
+      used.set(base, count + 1);
+      const name = (count ? base + ' (' + (count + 1) + ')' : base) + '.orignotes';
+      downloadFile(name, toDocument(p));
+      await new Promise(r => setTimeout(r, 400)); // Pause, damit Safari alle Downloads annimmt
+    }
+  }
+
+  $('exportCurrent').onclick = () => { if (current) exportPages([current]); };
+
+  $('exportSelected').onclick = () => {
+    exportPages(pages.filter(p => selected.has(p.id)));
+  };
+
+  // ---------- Import ----------
+
+  $('importFile').onchange = async e => {
+    const now = new Date().toISOString();
+    let failed = [];
+    for (const file of e.target.files) {
+      try {
+        const data = JSON.parse(await file.text());
+        if (data.format !== 'orignotes' || !data.page) throw new Error('invalid');
+        pages.push({
+          id: makeId(),
+          title: data.page.title || 'Importiert',
+          content: data.page.content || '',
+          created: data.page.created || now,
+          updated: now
+        });
+      } catch { failed.push(file.name); }
+    }
+    e.target.value = '';
+    save();
+    renderList();
+    if (failed.length) alert('Nicht importiert (keine gültige .orignotes-Datei):\n' + failed.join('\n'));
+  };
+
+  // ---------- Löschen ----------
+
+  $('deletePage').onclick = () => {
+    if (!current || !confirm('Seite wirklich löschen?')) return;
+    pages = pages.filter(p => p !== current);
+    selected.delete(current.id);
+    current = null;
+    save();
+    if (pages.length) openPage(pages[0]);
+    else { titleEl.value = ''; contentEl.value = ''; renderList(); }
+  };
+
+  // ---------- Start ----------
+
+  if (pages.length) openPage(pages[0]);
+  else $('newPage').click();
+</script>
+</body>
+</html>
