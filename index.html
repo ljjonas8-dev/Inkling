@@ -45,7 +45,7 @@
     min-height: 44px; text-align: center; font-family: inherit;
   }
   .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
-  .btn:disabled { opacity: 0.4; }
+  .btn:disabled { opacity: 0.4; cursor: default; }
   .row { display: flex; gap: 8px; }
   .row .btn { flex: 1; }
 
@@ -56,6 +56,7 @@
   }
   .page-item:hover, .page-item.active { background: var(--hover); }
   .page-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .page-item .hwmark { flex: 0 0 auto; font-size: 0.85rem; opacity: 0.8; }
   .page-item input[type=checkbox] {
     width: 22px; height: 22px; accent-color: var(--purple); flex-shrink: 0;
   }
@@ -86,10 +87,179 @@
     border-radius: 10px; padding: 14px; font-size: 1.1rem; resize: none; font-family: inherit;
     line-height: 1.5; width: 100%;
   }
-  input:focus, textarea:focus { outline: 2px solid var(--purple); }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--purple); }
   #importFile { display: none; }
 
+  /* ---------- Gemeinsame Overlay-Bausteine ---------- */
+  .hidden { display: none !important; }
+  .overlay {
+    position: fixed; inset: 0; z-index: 200; background: var(--bg);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .overlay-head {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 14px; padding-top: max(10px, env(safe-area-inset-top));
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .overlay-head h2 { margin: 0; font-size: 1.05rem; flex: 1; min-width: 120px; }
+  .overlay-head h2 small { font-weight: 400; opacity: 0.55; font-size: 0.85rem; }
+  .status { font-size: 0.8rem; opacity: 0.6; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; font-size: 0.8rem; }
+  .field > span { opacity: 0.75; }
+  .field b { font-weight: 600; opacity: 1; color: #fff; }
+  .field input[type=text], .field select, .field textarea {
+    background: #10112a; border: 1px solid var(--border); color: var(--text);
+    border-radius: 9px; padding: 9px 10px; font-family: inherit; font-size: 0.92rem;
+    width: 100%;
+  }
+  .field input[type=color] {
+    width: 100%; height: 40px; border: 1px solid var(--border); border-radius: 9px;
+    background: #10112a; padding: 3px;
+  }
+  .field input[type=range] { width: 100%; accent-color: var(--purple); }
+  .field textarea { resize: vertical; min-height: 96px; line-height: 1.45; }
+
+  /* ---------- Handschrift-Studio ---------- */
+  .hw-body { flex: 1; display: flex; min-height: 0; }
+  .hw-controls {
+    width: 300px; flex-shrink: 0; overflow-y: auto;
+    padding: 14px; background: var(--panel); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 11px;
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+  .hw-stage {
+    flex: 1; min-width: 0; overflow: auto; padding: 14px;
+    background: #0a0b1a; -webkit-overflow-scrolling: touch;
+  }
+  .hw-tools {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    position: sticky; top: -14px; z-index: 5;
+    background: rgba(10,11,26,0.94); backdrop-filter: blur(6px);
+    padding: 8px; margin: -14px -14px 12px; border-bottom: 1px solid var(--border);
+  }
+  .tool-group {
+    display: inline-flex; gap: 4px; padding: 3px; border-radius: 11px;
+    background: #15162f; border: 1px solid var(--border);
+  }
+  .toolbtn {
+    cursor: pointer; font-family: inherit; font-size: 0.85rem;
+    color: var(--text); background: transparent; border: none;
+    padding: 8px 10px; border-radius: 8px; min-height: 38px;
+  }
+  .toolbtn.active { background: var(--accent); color: #fff; }
+  .toolbtn:hover { background: var(--hover); }
+  .toolbtn.active:hover { background: var(--accent); }
+  .mini-field {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.8rem; opacity: 0.85;
+  }
+  .mini-field input[type=range] { width: 90px; accent-color: var(--purple); }
+  .hw-tools .spacer { flex: 1; }
+  #hwZoomVal { font-size: 0.8rem; opacity: 0.75; min-width: 44px; text-align: center; }
+
+  .hw-pages { max-width: 100%; }
+  .hw-page {
+    position: relative; margin: 0 auto 20px;
+    aspect-ratio: 794 / 1123;
+    background: #fff; border-radius: 3px;
+    box-shadow: 0 10px 34px rgba(0,0,0,0.55);
+    overflow: hidden;
+  }
+  .hw-page canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .hw-page canvas.edit { touch-action: pan-y; }
+  .hw-page canvas.edit.drawing { touch-action: none; }
+  .hw-page .pagenum {
+    position: absolute; right: 8px; bottom: 6px; font-size: 0.68rem;
+    color: rgba(0,0,0,0.35); pointer-events: none;
+  }
+  .hw-empty { text-align: center; padding: 40px 12px; opacity: 0.5; font-size: 0.9rem; }
+
+  /* ---------- Schrift-Designer ---------- */
+  .font-body { flex: 1; overflow-y: auto; padding: 16px; }
+  .font-top {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px;
+  }
+  .font-top .field { min-width: 180px; }
+  .font-top .field input, .font-top .field select { min-height: 42px; }
+  .font-preview { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .font-preview input {
+    background: #10112a; border: 1px solid var(--border); color: var(--text);
+    border-radius: 9px; padding: 10px 12px; font-family: inherit; font-size: 0.92rem;
+  }
+  .font-preview canvas {
+    width: 100%; height: auto; display: block;
+    background: #fffdf6; border: 1px solid var(--border); border-radius: 10px;
+  }
+  .font-intro { font-size: 0.83rem; opacity: 0.6; margin-bottom: 12px; line-height: 1.45; }
+  .char-group { margin-bottom: 16px; }
+  .char-group h4 { margin: 0 0 8px; font-size: 0.85rem; opacity: 0.6; font-weight: 500; }
+  .char-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .char-btn {
+    position: relative; width: 54px; height: 54px; border-radius: 11px;
+    border: 1px solid var(--border); background: #10112a; color: var(--text);
+    font-size: 1.15rem; cursor: pointer; font-family: inherit;
+  }
+  .char-btn:hover { border-color: var(--purple); }
+  .char-btn.drawn { background: #1d2450; border-color: #5b6bd6; }
+  .char-btn.drawn::after {
+    content: ''; position: absolute; right: 5px; top: 5px;
+    width: 7px; height: 7px; border-radius: 50%; background: #4ade80;
+  }
+  .char-btn .count {
+    position: absolute; left: 5px; bottom: 3px; font-size: 0.6rem; opacity: 0.6;
+  }
+
+  .modal {
+    position: fixed; inset: 0; z-index: 400; background: rgba(4,5,15,0.75);
+    display: flex; align-items: center; justify-content: center; padding: 14px;
+    backdrop-filter: blur(3px);
+  }
+  .modal-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+    width: 100%; max-width: 560px; max-height: 94vh; overflow-y: auto;
+    padding: 14px; box-shadow: 0 24px 70px rgba(0,0,0,0.6);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .modal-head { display: flex; align-items: center; gap: 10px; }
+  .modal-head h3 { margin: 0; font-size: 1.5rem; min-width: 42px; }
+  .modal-head .grow { flex: 1; }
+  .variant-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .variant {
+    position: relative; width: 72px; height: 54px; border-radius: 10px;
+    border: 2px solid var(--border); background: #fffdf6; cursor: pointer;
+    overflow: hidden; padding: 0;
+  }
+  .variant.active { border-color: var(--purple); box-shadow: 0 0 0 2px rgba(124,58,237,0.35); }
+  .variant canvas { width: 100%; height: 100%; display: block; }
+  .variant .del {
+    position: absolute; top: 1px; right: 1px; width: 18px; height: 18px;
+    border-radius: 50%; background: rgba(0,0,0,0.55); color: #fff; border: none;
+    font-size: 12px; line-height: 1; cursor: pointer; padding: 0;
+  }
+  .draw-area {
+    position: relative; width: 100%; aspect-ratio: 4 / 3;
+    border-radius: 12px; overflow: hidden; border: 1px solid var(--border);
+    background: #fffdf6; touch-action: none;
+  }
+  .draw-area canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .draw-area canvas#glyphCanvas { touch-action: none; cursor: crosshair; }
+  .glyph-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .glyph-actions .btn { flex: 1 1 auto; }
+  .file-btn { position: relative; overflow: hidden; }
+  .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
   /* Kleine Bildschirme / iPad Hochformat */
+  @media (max-width: 900px) {
+    .hw-body { flex-direction: column; }
+    .hw-controls {
+      width: auto; border-right: none; border-bottom: 1px solid var(--border);
+      max-height: 44vh;
+    }
+    .hw-stage { padding: 10px; }
+    .hw-tools { top: -10px; margin: -10px -10px 10px; }
+  }
   @media (max-width: 820px) {
     aside {
       position: fixed; top: 0; left: 0; bottom: 0;
@@ -116,15 +286,22 @@
   </div>
 
   <button id="exportSelected" class="btn" type="button" disabled>Ausgewählte exportieren (0)</button>
+  <button id="exportOneFile" class="btn ghost" type="button" disabled>Als eine .orignotes-Datei</button>
 
   <div id="pageList"></div>
-  <div class="hint">Häkchen setzen, um mehrere Seiten einzeln als .orignotes zu exportieren</div>
+
+  <div class="row">
+    <button id="fontOpenSide" class="btn ghost" type="button">🖋 Eigene Schrift</button>
+    <button id="hwOpenSide" class="btn ghost" type="button">✍ Handschrift</button>
+  </div>
+  <div class="hint">Häkchen setzen, um Seiten einzeln oder gesammelt als .orignotes zu exportieren. Handschrift und Schriften werden mitgesichert.</div>
 </aside>
 
 <main>
   <div class="toolbar">
     <button id="menuBtn" class="btn ghost" type="button">☰ Seiten</button>
-    <button id="exportCurrent" class="btn" type="button">Diese Seite exportieren</button>
+    <button id="hwOpen" class="btn" type="button">✍ Handschrift</button>
+    <button id="exportCurrent" class="btn ghost" type="button">Diese Seite exportieren</button>
     <button id="deletePage" class="btn ghost" type="button">Löschen</button>
     <span id="saveStatus"></span>
   </div>
@@ -133,6 +310,172 @@
   <textarea id="content" placeholder="Schreib hier..."></textarea>
 </main>
 
+<!-- ================= Handschrift-Studio ================= -->
+<section id="hwView" class="overlay hidden" aria-hidden="true">
+  <header class="overlay-head">
+    <button id="hwClose" class="btn ghost" type="button">← Notizen</button>
+    <h2>Handschrift-Studio <small id="hwNoteTitle"></small></h2>
+    <span id="hwStatus" class="status"></span>
+    <button id="hwPng" class="btn ghost" type="button">PNG</button>
+    <button id="hwPdf" class="btn" type="button">PDF</button>
+  </header>
+
+  <div class="hw-body">
+    <div class="hw-controls">
+      <label class="field">
+        <span>Text</span>
+        <textarea id="hwText" placeholder="Text eingeben oder einfügen…"></textarea>
+      </label>
+      <div class="row">
+        <button id="hwFromNote" class="btn ghost" type="button">Aus Notiz</button>
+        <button id="hwGenerate" class="btn" type="button">Erzeugen</button>
+      </div>
+
+      <label class="field">
+        <span>Schrift</span>
+        <select id="hwFont"></select>
+      </label>
+      <button id="hwDesign" class="btn ghost" type="button">✍ Eigene Schrift gestalten</button>
+
+      <div class="row">
+        <label class="field" style="flex:1">
+          <span>Papier</span>
+          <select id="hwPaper">
+            <option value="blank">Blanko</option>
+            <option value="lined">Liniert</option>
+            <option value="grid">Kariert</option>
+            <option value="dots">Punkte</option>
+          </select>
+        </label>
+        <label class="field" style="flex:1">
+          <span>Papierfarbe</span>
+          <input type="color" id="hwPaperColor" value="#fffdf6">
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Tintenfarbe</span>
+        <input type="color" id="hwInk" value="#1b2a6b">
+      </label>
+
+      <label class="field">
+        <span>Schriftgröße <b id="hwSizeVal">38</b></span>
+        <input type="range" id="hwSize" min="20" max="64" step="1" value="38">
+      </label>
+
+      <label class="field">
+        <span>Zeilenabstand <b id="hwLineVal">1.20</b></span>
+        <input type="range" id="hwLine" min="0.7" max="2.0" step="0.05" value="1.2">
+      </label>
+
+      <label class="field">
+        <span>Natürlichkeit <b id="hwJitterVal">55</b></span>
+        <input type="range" id="hwJitter" min="0" max="100" step="1" value="55">
+      </label>
+
+      <div class="hint" style="text-align:left;opacity:0.55">
+        Zeichne deine Buchstaben einmal mit Finger, Stift oder Maus – pro Zeichen bis zu drei Varianten.
+        Nicht gezeichnete Zeichen werden in einer Schreibschrift-Ersatzschrift gesetzt.
+      </div>
+    </div>
+
+    <div class="hw-stage">
+      <div class="hw-tools">
+        <div class="tool-group" id="hwTools">
+          <button class="toolbtn active" data-tool="none" type="button">✋ Scrollen</button>
+          <button class="toolbtn" data-tool="pen" type="button">✒️ Stift</button>
+          <button class="toolbtn" data-tool="marker" type="button">🖍 Marker</button>
+          <button class="toolbtn" data-tool="eraser" type="button">🧽 Radierer</button>
+        </div>
+        <label class="mini-field">Stärke <input type="range" id="hwBrush" min="1" max="24" value="3"></label>
+        <button id="hwUndo" class="btn ghost" type="button" style="min-height:38px;padding:6px 10px">↶ Rückgängig</button>
+        <button id="hwClearStrokes" class="btn ghost" type="button" style="min-height:38px;padding:6px 10px">Anmerkungen löschen</button>
+        <span class="spacer"></span>
+        <div class="tool-group">
+          <button id="hwZoomOut" class="toolbtn" type="button">−</button>
+          <span id="hwZoomVal">100 %</span>
+          <button id="hwZoomIn" class="toolbtn" type="button">+</button>
+        </div>
+      </div>
+
+      <div class="hw-pages" id="hwPages"></div>
+      <div id="hwEmpty" class="hw-empty" style="display:none">
+        Noch keine Handschrift – schreibe links einen Text und tippe auf „Erzeugen“.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= Schrift-Designer ================= -->
+<section id="fontView" class="overlay hidden" aria-hidden="true">
+  <header class="overlay-head">
+    <button id="fontClose" class="btn ghost" type="button">← Zurück</button>
+    <h2>Schrift gestalten <small id="fontTitleSmall"></small></h2>
+    <span class="status" id="fontProgress"></span>
+    <button id="fontExport" class="btn ghost" type="button">Exportieren</button>
+    <label class="btn ghost file-btn">
+      Importieren
+      <input type="file" id="fontImport" accept=".json,application/json">
+    </label>
+  </header>
+
+  <div class="font-body">
+    <div class="font-top">
+      <label class="field">
+        <span>Schrift</span>
+        <select id="fontSelect"></select>
+      </label>
+      <label class="field">
+        <span>Name</span>
+        <input type="text" id="fontName" placeholder="Meine Handschrift">
+      </label>
+      <button id="fontNew" class="btn ghost" type="button">+ Neue Schrift</button>
+      <button id="fontDelete" class="btn ghost" type="button">Löschen</button>
+    </div>
+    <div class="font-preview">
+      <input type="text" id="fontPreviewText" value="Meine Handschrift sieht so aus." placeholder="Vorschautext …">
+      <canvas id="fontPreview"></canvas>
+    </div>
+    <div class="font-intro">
+      Tippe auf einen Buchstaben, zeichne ihn auf der Karte nach und tippe auf „Speichern &amp; weiter“.
+      Pro Zeichen sind bis zu drei Varianten möglich – das macht die Schrift natürlicher.
+    </div>
+    <div id="charGrid"></div>
+  </div>
+</section>
+
+<!-- ================= Zeichen-Editor ================= -->
+<div id="glyphModal" class="modal hidden">
+  <div class="modal-card">
+    <header class="modal-head">
+      <h3 id="glyphTitle">A</h3>
+      <span class="status grow" id="glyphHint"></span>
+      <button id="glyphClose" class="btn ghost" type="button" style="min-height:38px;padding:6px 12px">Fertig</button>
+    </header>
+
+    <div class="variant-row" id="glyphVariants"></div>
+
+    <div class="draw-area" id="drawArea">
+      <canvas id="ghostCanvas"></canvas>
+      <canvas id="glyphCanvas"></canvas>
+    </div>
+
+    <label class="mini-field" style="justify-content:space-between">
+      Strichstärke
+      <input type="range" id="glyphWidth" min="1" max="9" step="0.5" value="3">
+    </label>
+
+    <div class="glyph-actions">
+      <button id="glyphUndo" class="btn ghost" type="button">↶</button>
+      <button id="glyphClear" class="btn ghost" type="button">Leeren</button>
+      <button id="glyphPrev" class="btn ghost" type="button">‹ Zurück</button>
+      <button id="glyphNext" class="btn ghost" type="button">Weiter ›</button>
+      <button id="glyphSave" class="btn" type="button">Speichern</button>
+      <button id="glyphSaveNext" class="btn" type="button">Speichern &amp; weiter</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const $ = id => document.getElementById(id);
   const alphabetEl = $('alphabet');
@@ -140,11 +483,46 @@
   const titleEl = $('title');
   const contentEl = $('content');
 
-  let pages = [];
-  try {
-    pages = JSON.parse(localStorage.getItem('orinotes') || '[]');
-    if (!Array.isArray(pages)) pages = [];
-  } catch { pages = []; }
+  const PAGE_W = 794;          // A4 bei 96 dpi
+  const PAGE_H = 1123;
+  const BOX_W = 480;           // Zeichen-Karte im Schriftdesigner
+  const BOX_H = 360;
+  const BASE_Y = 270;          // Grundlinie auf der Karte
+  const STORE_PAGES = 'orinotes';
+  const STORE_FONTS = 'orinotes_fonts';
+  const STORE_ACTIVE = 'orinotes_font_active';
+
+  /* ================= Persistenz ================= */
+
+  function readJSON(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null) return fallback;
+      const v = JSON.parse(raw);
+      return v === null || v === undefined ? fallback : v;
+    } catch { return fallback; }
+  }
+
+  let pages = readJSON(STORE_PAGES, []);
+  if (!Array.isArray(pages)) pages = [];
+
+  let fonts = readJSON(STORE_FONTS, []);
+  if (!Array.isArray(fonts)) fonts = [];
+  fonts = fonts.filter(f => f && typeof f === 'object' && f.glyphs).map(f => {
+    f.boxW = f.boxW || BOX_W;
+    f.boxH = f.boxH || BOX_H;
+    if (!f.glyphs || typeof f.glyphs !== 'object') f.glyphs = {};
+    // alte Bitmap-Glyphen verwerfen (Format ohne Vektor-Striche)
+    for (const ch in f.glyphs) {
+      const arr = f.glyphs[ch];
+      if (!Array.isArray(arr)) { delete f.glyphs[ch]; continue; }
+      f.glyphs[ch] = arr.filter(g => g && Array.isArray(g.strokes) && g.strokes.length);
+      if (!f.glyphs[ch].length) delete f.glyphs[ch];
+    }
+    return f;
+  });
+
+  let activeFontId = localStorage.getItem(STORE_ACTIVE) || 'system';
 
   let current = null;
   let selected = new Set();
@@ -153,6 +531,25 @@
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
     return 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2);
   }
+
+  function save() {
+    try { localStorage.setItem(STORE_PAGES, JSON.stringify(pages)); }
+    catch { flashStatus('Speicher voll – Seite nicht gesichert!'); }
+  }
+
+  function saveFonts() {
+    try { localStorage.setItem(STORE_FONTS, JSON.stringify(fonts)); }
+    catch { alert('Der Speicher des Browsers ist voll. Bitte eine Schrift exportieren und andere löschen.'); }
+  }
+
+  function flashStatus(text) {
+    const el = $('saveStatus');
+    el.textContent = text;
+    clearTimeout(flashStatus._t);
+    flashStatus._t = setTimeout(() => { el.textContent = ''; }, 2500);
+  }
+
+  /* ================= Notizen (bestehend) ================= */
 
   // Deutsches Alphabet inkl. Umlaute und ß
   'ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜabcdefghijklmnopqrstuvwxyzäöüß'.split('').forEach(ch => {
@@ -167,10 +564,6 @@
     contentEl.setRangeText(text, contentEl.selectionStart, contentEl.selectionEnd, 'end');
     contentEl.focus();
     saveCurrent();
-  }
-
-  function save() {
-    try { localStorage.setItem('orinotes', JSON.stringify(pages)); } catch {}
   }
 
   function saveCurrent() {
@@ -202,6 +595,15 @@
       label.textContent = p.title || 'Ohne Titel';
 
       row.append(cb, label);
+
+      if (p.hw && ((p.hw.text || '').trim() || (p.hw.strokes || []).length)) {
+        const mark = document.createElement('span');
+        mark.className = 'hwmark';
+        mark.textContent = '✍';
+        mark.title = 'Mit Handschrift';
+        row.appendChild(mark);
+      }
+
       row.onclick = () => openPage(p);
       listEl.appendChild(row);
     });
@@ -213,6 +615,10 @@
     $('exportSelected').textContent = 'Ausgewählte exportieren (' + n + ')';
     $('exportSelected').disabled = n === 0;
     $('selectAll').textContent = (n === pages.length && n > 0) ? 'Keine wählen' : 'Alle wählen';
+    $('exportOneFile').textContent = n
+      ? 'Auswahl als eine .orignotes-Datei (' + n + ')'
+      : 'Alle Seiten als eine .orignotes-Datei';
+    $('exportOneFile').disabled = pages.length === 0 && n === 0;
   }
 
   function openPage(p) {
@@ -242,19 +648,50 @@
     renderList();
   };
 
-  // ---------- Export als .orignotes ----------
+  /* ---------- Export als .orignotes ---------- */
+
+  function pageData(p) {
+    return {
+      id: p.id,
+      title: p.title,
+      content: p.content,
+      created: p.created,
+      updated: p.updated
+    };
+  }
+
+  // Schriften, die in den exportierten Handschriften benutzt werden, mitliefern
+  function fontsForPages(list) {
+    const ids = new Set();
+    list.forEach(p => {
+      const id = p.hw && p.hw.settings && p.hw.settings.fontId;
+      if (id) ids.add(id);
+    });
+    return fonts.filter(f => ids.has(f.id)).map(f => ({
+      id: f.id,
+      name: f.name,
+      boxW: f.boxW,
+      boxH: f.boxH,
+      glyphs: f.glyphs
+    }));
+  }
 
   function toDocument(p) {
     return {
       format: 'orignotes',
-      version: 2,
-      page: {
-        id: p.id,
-        title: p.title,
-        content: p.content,
-        created: p.created,
-        updated: p.updated
-      }
+      version: 3,
+      page: pageData(p),
+      handwriting: p.hw || null,
+      fonts: fontsForPages([p])
+    };
+  }
+
+  function toMultiDocument(list) {
+    return {
+      format: 'orignotes',
+      version: 3,
+      pages: list.map(p => Object.assign(pageData(p), { handwriting: p.hw || null })),
+      fonts: fontsForPages(list)
     };
   }
 
@@ -264,6 +701,10 @@
 
   function downloadFile(filename, data) {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    downloadBlob(filename, blob);
+  }
+
+  function downloadBlob(filename, blob) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -271,7 +712,7 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
   // Jede Seite wird als eigene .orignotes-Datei gespeichert
@@ -294,31 +735,121 @@
     exportPages(pages.filter(p => selected.has(p.id)));
   };
 
-  // ---------- Import ----------
+  $('exportOneFile').onclick = () => {
+    const list = selected.size ? pages.filter(p => selected.has(p.id)) : pages.slice();
+    if (!list.length) return alert('Keine Seiten zum Exportieren vorhanden.');
+    const stamp = new Date().toISOString().slice(0, 10);
+    const name = (selected.size ? 'OriNotes-Auswahl-' : 'OriNotes-Alle-Seiten-') + stamp + '.orignotes';
+    downloadFile(name, toMultiDocument(list));
+  };
+
+  $('hwOpenSide').onclick = () => {
+    if (!$('hwView').classList.contains('hidden')) return;
+    openHandwriting();
+  };
+  $('fontOpenSide').onclick = () => {
+    if (!$('fontView').classList.contains('hidden')) return;
+    openDesigner();
+  };
+
+  /* ---------- Import ---------- */
+
+  function normalizeHandwriting(hw) {
+    if (!hw || typeof hw !== 'object') return null;
+    return {
+      text: typeof hw.text === 'string' ? hw.text : '',
+      settings: hw.settings && typeof hw.settings === 'object' ? hw.settings : {},
+      seed: Number(hw.seed) || 12345,
+      strokes: Array.isArray(hw.strokes) ? hw.strokes.filter(s => s && Array.isArray(s.pts)) : []
+    };
+  }
+
+  function normalizeGlyph(g) {
+    return {
+      x: Number(g.x) || 0,
+      y: Number(g.y) || 0,
+      w: Number(g.w) || 1,
+      h: Number(g.h) || 1,
+      base: Number(g.base) || 0,
+      strokes: g.strokes.map(st => ({
+        s: Number(st.s) || 3,
+        pts: st.pts.map(pt => [Number(pt[0]) || 0, Number(pt[1]) || 0])
+      }))
+    };
+  }
+
+  // Schriften aus einer .orignotes-Datei übernehmen (vorhandene bleiben unangetastet)
+  function importFontsFromDocument(list) {
+    if (!Array.isArray(list)) return 0;
+    let added = 0;
+    for (const raw of list) {
+      if (!raw || !raw.glyphs || typeof raw.glyphs !== 'object') continue;
+      if (raw.id && getFontById(raw.id)) continue;
+      const f = {
+        id: raw.id || makeId(),
+        name: raw.name || 'Importierte Schrift',
+        boxW: Number(raw.boxW) || BOX_W,
+        boxH: Number(raw.boxH) || BOX_H,
+        glyphs: {}
+      };
+      for (const ch in raw.glyphs) {
+        const arr = Array.isArray(raw.glyphs[ch]) ? raw.glyphs[ch] : [];
+        const clean = arr.filter(g => g && Array.isArray(g.strokes) && g.strokes.length).map(normalizeGlyph);
+        if (clean.length) f.glyphs[ch] = clean;
+      }
+      if (Object.keys(f.glyphs).length) { fonts.push(f); added++; }
+    }
+    if (added) saveFonts();
+    return added;
+  }
+
+  function pageFromDoc(doc, now) {
+    return {
+      id: makeId(),
+      title: doc.title || 'Importiert',
+      content: doc.content || '',
+      created: doc.created || now,
+      updated: now,
+      hw: normalizeHandwriting(doc.handwriting || doc.hw || null)
+    };
+  }
 
   $('importFile').onchange = async e => {
     const now = new Date().toISOString();
     let failed = [];
+    let imported = 0;
+    let newFonts = 0;
     for (const file of e.target.files) {
       try {
         const data = JSON.parse(await file.text());
-        if (data.format !== 'orignotes' || !data.page) throw new Error('invalid');
-        pages.push({
-          id: makeId(),
-          title: data.page.title || 'Importiert',
-          content: data.page.content || '',
-          created: data.page.created || now,
-          updated: now
-        });
+        if (data.format !== 'orignotes') throw new Error('invalid');
+
+        let docs = [];
+        if (Array.isArray(data.pages)) {
+          docs = data.pages.filter(d => d && typeof d === 'object');
+        } else if (data.page) {
+          docs = [Object.assign({}, data.page, {
+            handwriting: data.handwriting || data.page.handwriting || null
+          })];
+        }
+        if (!docs.length) throw new Error('invalid');
+
+        newFonts += importFontsFromDocument(data.fonts);
+        docs.forEach(doc => { pages.push(pageFromDoc(doc, now)); imported++; });
       } catch { failed.push(file.name); }
     }
     e.target.value = '';
-    save();
-    renderList();
+    if (imported) {
+      save();
+      renderList();
+      const parts = [imported + (imported === 1 ? ' Seite' : ' Seiten') + ' importiert'];
+      if (newFonts) parts.push(newFonts + (newFonts === 1 ? ' Schrift' : ' Schriften') + ' übernommen');
+      flashStatus(parts.join(' · ') + ' ✓');
+    }
     if (failed.length) alert('Nicht importiert (keine gültige .orignotes-Datei):\n' + failed.join('\n'));
   };
 
-  // ---------- Löschen ----------
+  /* ---------- Löschen ---------- */
 
   $('deletePage').onclick = () => {
     if (!current || !confirm('Seite wirklich löschen?')) return;
@@ -330,10 +861,1446 @@
     else { titleEl.value = ''; contentEl.value = ''; renderList(); }
   };
 
-  // ---------- Start ----------
+  /* ============================================================
+     HANDSCHRIFT (Conwrite-Funktionen)
+     ============================================================ */
+
+  const DEFAULT_SETTINGS = {
+    fontId: 'system',
+    paper: 'lined',
+    paperColor: '#fffdf6',
+    ink: '#1b2a6b',
+    fontSize: 38,
+    lineSpacing: 1.2,
+    jitter: 55,
+    marginX: 64,
+    marginTop: 84,
+    marginBottom: 72
+  };
+
+  const CHARSET_GROUPS = [
+    { label: 'Großbuchstaben', chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ'.split('') },
+    { label: 'Kleinbuchstaben', chars: 'abcdefghijklmnopqrstuvwxyzäöüß'.split('') },
+    { label: 'Ziffern', chars: '0123456789'.split('') },
+    { label: 'Satzzeichen & Symbole', chars: '.,;:!?\'"„“”‘’()-–—/\\&+*=%€$@#_[]{}<>~^'.split('') }
+  ];
+  const ALL_CHARS = CHARSET_GROUPS.reduce((a, g) => a.concat(g.chars), []);
+
+  const measureCanvas = document.createElement('canvas');
+  const measureCtx = measureCanvas.getContext('2d');
+
+  const hw = {
+    open: false,
+    page: null,
+    text: '',
+    seed: 12345,
+    settings: Object.assign({}, DEFAULT_SETTINGS),
+    strokes: [],
+    layout: [],
+    els: [],
+    zoom: 1,
+    tool: 'none',
+    brush: 3,
+    rebuildTimer: null
+  };
+
+  function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+
+  function deviceScale() {
+    const base = Math.min(window.devicePixelRatio || 1, 2);
+    const count = hw.layout.length || 1;
+    if (count > 8) return 1;
+    if (count > 4) return Math.min(base, 1.4);
+    return base;
+  }
+
+  function getFontById(id) {
+    return fonts.find(f => f.id === id) || null;
+  }
+
+  function activeFont() {
+    return getFontById(hw.settings.fontId);
+  }
+
+  function fallbackFont(size) {
+    // 0.8 * fontSize ergibt etwa dieselbe Kapitalhöhe wie ein gezeichnetes Zeichen
+    return Math.round(size * 0.8) + 'px "Bradley Hand","Segoe Script","Snell Roundhand","Comic Sans MS","Apple Chancery",cursive';
+  }
+
+  /* ---------- Zufall mit Seed (damit alles reproduzierbar bleibt) ---------- */
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function randomSeed() {
+    return Math.floor(Math.random() * 2147483646) + 1;
+  }
+
+  /* ---------- Glyphen: Vektorstriche -> Bitmap (pro Tintenfarbe gecacht) ---------- */
+
+  const glyphCache = new WeakMap();
+
+  function glyphBitmap(g, color) {
+    let cache = glyphCache.get(g);
+    if (!cache) { cache = {}; glyphCache.set(g, cache); }
+    if (cache[color]) return cache[color];
+    const S = 2;
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.ceil(g.w * S));
+    c.height = Math.max(1, Math.ceil(g.h * S));
+    const ctx = c.getContext('2d');
+    ctx.scale(S, S);
+    ctx.translate(-g.x, -g.y);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const st of g.strokes) {
+      ctx.lineWidth = st.s || 3;
+      const pts = st.pts;
+      if (!pts || !pts.length) continue;
+      if (pts.length === 1) {
+        ctx.beginPath();
+        ctx.arc(pts[0][0], pts[0][1], (st.s || 3) / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+        ctx.stroke();
+      }
+    }
+    cache[color] = c;
+    return c;
+  }
+
+  /* ---------- Layout: Text -> Zeichen-Operationen pro Seite ---------- */
+
+  function layoutHandwriting() {
+    const s = hw.settings;
+    const font = activeFont();
+    const text = (hw.text || '').replace(/\r\n?/g, '\n');
+
+    if (!text.trim()) return [];
+
+    const rng = mulberry32(hw.seed || 1);
+    const jit = clamp(s.jitter, 0, 100) / 100;
+    const scale = font ? s.fontSize / (font.boxH || BOX_H) : 1;
+    const mx = s.marginX;
+    const mt = s.marginTop;
+    const mb = s.marginBottom;
+    const maxW = PAGE_W - mx * 2;
+    const lineH = s.fontSize * s.lineSpacing;
+    const maxLines = Math.max(1, Math.floor((PAGE_H - mt - mb) / lineH));
+    const spaceAdv = s.fontSize * 0.34;
+    const fstr = fallbackFont(s.fontSize);
+
+    const layoutPages = [];
+    let ops = [];
+    let line = 0;
+
+    function startPage() {
+      if (ops.length) layoutPages.push(ops);
+      ops = [];
+      line = 0;
+    }
+    function lineStartX() { return mx + (jit > 0 ? (rng() * 2 - 1) * 2.5 * jit : 0); }
+    function baselineY(i) { return mt + i * lineH + lineH * 0.72; }
+
+    let x = lineStartX();
+    let baseY = baselineY(0);
+
+    function nextLine() {
+      line++;
+      if (line >= maxLines) startPage();
+      x = lineStartX();
+      baseY = baselineY(line);
+    }
+
+    function buildWord(word) {
+      const out = [];
+      let w = 0;
+      for (const ch of word) {
+        const variants = font && font.glyphs ? font.glyphs[ch] : null;
+        if (variants && variants.length) {
+          const g = variants[Math.floor(rng() * variants.length)];
+          const k = 1 + (rng() * 2 - 1) * 0.05 * jit;
+          const gw = g.w * scale * k;
+          const gh = g.h * scale * k;
+          const dy = (rng() * 2 - 1) * s.fontSize * 0.035 * jit;
+          const rot = (rng() * 2 - 1) * 3 * jit * Math.PI / 180;
+          const adv = gw + s.fontSize * 0.055 + (rng() * 2 - 1) * s.fontSize * 0.02 * jit;
+          out.push({ t: 'img', g: g, x: w, y: dy - g.base * scale * k, w: gw, h: gh, rot: rot, adv: adv });
+          w += adv;
+        } else {
+          measureCtx.font = fstr;
+          const tw = measureCtx.measureText(ch).width || s.fontSize * 0.4;
+          const adv = tw + (rng() * 2 - 1) * s.fontSize * 0.02 * jit;
+          const dy = (rng() * 2 - 1) * s.fontSize * 0.03 * jit;
+          const rot = (rng() * 2 - 1) * 2.5 * jit * Math.PI / 180;
+          out.push({ t: 'txt', ch: ch, x: w, y: dy, w: tw, h: s.fontSize, rot: rot, adv: adv });
+          w += adv;
+        }
+      }
+      return { ops: out, width: w };
+    }
+
+    const paragraphs = text.split('\n');
+    for (let pi = 0; pi < paragraphs.length; pi++) {
+      const para = paragraphs[pi];
+      if (!para.trim()) { nextLine(); continue; }
+      const words = para.split(' ');
+      for (let wi = 0; wi < words.length; wi++) {
+        const word = words[wi];
+        if (!word) { x += spaceAdv; continue; }
+        const built = buildWord(word);
+        if (x + built.width > mx + maxW && x > mx + 1) nextLine();
+        for (const op of built.ops) {
+          op.x += x;
+          op.by = baseY;
+          ops.push(op);
+        }
+        x += built.width + spaceAdv;
+      }
+      nextLine();
+    }
+
+    if (ops.length) layoutPages.push(ops);
+    // leere letzte Seite vermeiden
+    while (layoutPages.length > 1 && layoutPages[layoutPages.length - 1].length === 0) layoutPages.pop();
+    return layoutPages;
+  }
+
+  /* ---------- Papier ---------- */
+
+  function drawPaper(ctx) {
+    const s = hw.settings;
+    const lineH = s.fontSize * s.lineSpacing;
+    ctx.save();
+    ctx.fillStyle = s.paperColor || '#fffdf6';
+    ctx.fillRect(0, 0, PAGE_W, PAGE_H);
+
+    const gridColor = 'rgba(64, 96, 160, 0.20)';
+    const gridColorStrong = 'rgba(64, 96, 160, 0.30)';
+
+    if (s.paper === 'lined') {
+      ctx.strokeStyle = gridColor;
+      ctx.lineWidth = 1;
+      for (let i = 0; s.marginTop + i * lineH < PAGE_H; i++) {
+        const y = s.marginTop + i * lineH + lineH * 0.72 + s.fontSize * 0.13;
+        if (y > PAGE_H - 8) break;
+        ctx.beginPath();
+        ctx.moveTo(s.marginX * 0.55, y);
+        ctx.lineTo(PAGE_W - s.marginX * 0.45, y);
+        ctx.stroke();
+      }
+      // Randlinie
+      ctx.strokeStyle = 'rgba(220, 80, 90, 0.28)';
+      ctx.beginPath();
+      ctx.moveTo(s.marginX - 22, 0);
+      ctx.lineTo(s.marginX - 22, PAGE_H);
+      ctx.stroke();
+    } else if (s.paper === 'grid') {
+      const step = 28;
+      ctx.strokeStyle = gridColor;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let gx = step; gx < PAGE_W; gx += step) { ctx.moveTo(gx, 0); ctx.lineTo(gx, PAGE_H); }
+      for (let gy = step; gy < PAGE_H; gy += step) { ctx.moveTo(0, gy); ctx.lineTo(PAGE_W, gy); }
+      ctx.stroke();
+      ctx.strokeStyle = gridColorStrong;
+      ctx.beginPath();
+      ctx.moveTo(step * 2, 0); ctx.lineTo(step * 2, PAGE_H);
+      ctx.stroke();
+    } else if (s.paper === 'dots') {
+      const step = 26;
+      ctx.fillStyle = gridColorStrong;
+      for (let gy = step; gy < PAGE_H; gy += step) {
+        for (let gx = step; gx < PAGE_W; gx += step) {
+          ctx.beginPath();
+          ctx.arc(gx, gy, 1.15, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  /* ---------- Zeichnen ---------- */
+
+  function drawOps(ctx, ops, color) {
+    const fstr = fallbackFont(hw.settings.fontSize);
+    ctx.save();
+    ctx.fillStyle = color;
+    for (const op of ops) {
+      if (op.t === 'img') {
+        const bmp = glyphBitmap(op.g, color);
+        ctx.save();
+        ctx.translate(op.x + op.w / 2, op.by + op.y + op.h / 2);
+        if (op.rot) ctx.rotate(op.rot);
+        ctx.drawImage(bmp, -op.w / 2, -op.h / 2, op.w, op.h);
+        ctx.restore();
+      } else {
+        ctx.save();
+        ctx.font = fstr;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        ctx.translate(op.x + op.w / 2, op.by + op.y);
+        if (op.rot) ctx.rotate(op.rot);
+        ctx.fillText(op.ch, 0, 0);
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+
+  function paintStroke(ctx, st) {
+    if (!st || !st.pts || !st.pts.length) return;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    if (st.tool === 'eraser') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.lineWidth = (st.size || 3) * 3;
+      ctx.strokeStyle = 'rgba(0,0,0,1)';
+      ctx.fillStyle = 'rgba(0,0,0,1)';
+    } else if (st.tool === 'marker') {
+      ctx.lineWidth = (st.size || 3) * 2.6;
+      ctx.strokeStyle = 'rgba(250, 204, 21, 0.32)';
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.32)';
+    } else {
+      ctx.lineWidth = st.size || 3;
+      ctx.strokeStyle = st.color || hw.settings.ink;
+      ctx.fillStyle = st.color || hw.settings.ink;
+    }
+    const pts = st.pts;
+    if (pts.length === 1) {
+      ctx.beginPath();
+      ctx.arc(pts[0][0], pts[0][1], (st.tool === 'eraser' ? (st.size || 3) * 1.5 : (st.size || 3) / 2), 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function replayStrokes(inkCtx, editCtx, pageIndex) {
+    for (const st of hw.strokes) {
+      if (st.p !== pageIndex) continue;
+      if (st.tool === 'eraser') {
+        paintStroke(inkCtx, st);
+        paintStroke(editCtx, st);
+      } else {
+        paintStroke(editCtx, st);
+      }
+    }
+  }
+
+  /* ---------- Seiten im Studio ---------- */
+
+  let paperCache = { key: '', url: '' };
+
+  // Papier wird einmal gezeichnet und als CSS-Hintergrund aller Seiten genutzt
+  function paperTextureUrl() {
+    const s = hw.settings;
+    const key = [s.paper, s.paperColor, s.fontSize, s.lineSpacing].join('|');
+    if (paperCache.key === key) return paperCache.url;
+    const S = 2;
+    const c = document.createElement('canvas');
+    c.width = Math.round(PAGE_W * S);
+    c.height = Math.round(PAGE_H * S);
+    const ctx = c.getContext('2d');
+    ctx.scale(S, S);
+    drawPaper(ctx);
+    paperCache = { key: key, url: c.toDataURL('image/png') };
+    return paperCache.url;
+  }
+
+  function createPageEls(count) {
+    const host = $('hwPages');
+    host.innerHTML = '';
+    hw.els = [];
+    const dpr = deviceScale();
+    const tex = paperTextureUrl();
+    for (let i = 0; i < count; i++) {
+      const wrap = document.createElement('div');
+      wrap.className = 'hw-page';
+      wrap.style.width = Math.round(PAGE_W * hw.zoom) + 'px';
+      wrap.style.backgroundImage = 'url(' + tex + ')';
+      wrap.style.backgroundSize = '100% 100%';
+
+      const mk = cls => {
+        const c = document.createElement('canvas');
+        c.width = Math.round(PAGE_W * dpr);
+        c.height = Math.round(PAGE_H * dpr);
+        c.className = cls;
+        wrap.appendChild(c);
+        return c;
+      };
+      const ink = mk('ink');
+      const edit = mk('edit');
+
+      const num = document.createElement('span');
+      num.className = 'pagenum';
+      num.textContent = (i + 1) + ' / ' + count;
+      wrap.appendChild(num);
+
+      bindDrawing(edit, i);
+      host.appendChild(wrap);
+      hw.els.push({ wrap: wrap, ink: ink, edit: edit });
+    }
+  }
+
+  function applyZoom() {
+    $('hwZoomVal').textContent = Math.round(hw.zoom * 100) + ' %';
+    hw.els.forEach(el => { el.wrap.style.width = Math.round(PAGE_W * hw.zoom) + 'px'; });
+  }
+
+  function paintPage(el, ops, index, dpr) {
+    if (!el) return;
+
+    const ictx = el.ink.getContext('2d');
+    ictx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ictx.clearRect(0, 0, PAGE_W, PAGE_H);
+    drawOps(ictx, ops || [], hw.settings.ink);
+
+    const ectx = el.edit.getContext('2d');
+    ectx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ectx.clearRect(0, 0, PAGE_W, PAGE_H);
+
+    replayStrokes(ictx, ectx, index);
+  }
+
+  function renderPageAt(index) {
+    paintPage(hw.els[index], hw.layout[index], index, deviceScale());
+  }
+
+  function renderPages() {
+    const layout = hw.layout;
+    const dpr = deviceScale();
+    if (hw.els.length !== layout.length) createPageEls(layout.length);
+    $('hwEmpty').style.display = layout.length ? 'none' : 'block';
+
+    const tex = paperTextureUrl();
+    hw.els.forEach(el => { el.wrap.style.backgroundImage = 'url(' + tex + ')'; });
+
+    layout.forEach((ops, i) => paintPage(hw.els[i], ops, i, dpr));
+
+    $('hwStatus').textContent = layout.length
+      ? layout.length + (layout.length === 1 ? ' Seite' : ' Seiten')
+      : '';
+  }
+
+  function rebuild(newSeed) {
+    if (newSeed) hw.seed = randomSeed();
+    hw.layout = layoutHandwriting();
+    renderPages();
+    saveHandwriting();
+  }
+
+  function scheduleRebuild() {
+    clearTimeout(hw.rebuildTimer);
+    hw.rebuildTimer = setTimeout(() => rebuild(false), 220);
+  }
+
+  function saveHandwriting() {
+    if (!hw.page) return;
+    hw.page.hw = {
+      text: hw.text,
+      settings: Object.assign({}, hw.settings),
+      seed: hw.seed,
+      strokes: hw.strokes
+    };
+    save();
+    renderList();
+  }
+
+  /* ---------- Zeichnen im Studio ---------- */
+
+  function canvasPoint(canvas, e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (PAGE_W / rect.width);
+    const y = (e.clientY - rect.top) * (PAGE_H / rect.height);
+    return [Math.round(clamp(x, 0, PAGE_W) * 10) / 10, Math.round(clamp(y, 0, PAGE_H) * 10) / 10];
+  }
+
+  function bindDrawing(canvas, pageIndex) {
+    let live = null;
+
+    function segment(from, to) {
+      const el = hw.els[pageIndex];
+      if (!el) return;
+      const ctx = el.edit.getContext('2d');
+      const dpr = deviceScale();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      paintStroke(ctx, {
+        tool: live.tool,
+        size: live.size,
+        color: live.color,
+        pts: [from, to]
+      });
+      if (live.tool === 'eraser') {
+        const ictx = el.ink.getContext('2d');
+        ictx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        paintStroke(ictx, { tool: 'eraser', size: live.size, pts: [from, to] });
+      }
+    }
+
+    canvas.addEventListener('pointerdown', e => {
+      if (hw.tool === 'none') return;
+      e.preventDefault();
+      try { canvas.setPointerCapture(e.pointerId); } catch {}
+      const pt = canvasPoint(canvas, e);
+      live = {
+        p: pageIndex,
+        tool: hw.tool,
+        size: hw.brush,
+        color: hw.settings.ink,
+        pts: [pt]
+      };
+      segment(pt, pt);
+    });
+
+    canvas.addEventListener('pointermove', e => {
+      if (!live) return;
+      e.preventDefault();
+      const pt = canvasPoint(canvas, e);
+      const last = live.pts[live.pts.length - 1];
+      if (Math.abs(pt[0] - last[0]) < 0.8 && Math.abs(pt[1] - last[1]) < 0.8) return;
+      live.pts.push(pt);
+      segment(last, pt);
+    });
+
+    function end() {
+      if (!live) return;
+      const page = live.p;
+      if (live.pts.length) {
+        hw.strokes.push(live);
+        saveHandwriting();
+      }
+      live = null;
+      renderPageAt(page);
+    }
+    canvas.addEventListener('pointerup', end);
+    canvas.addEventListener('pointercancel', end);
+    canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && e.buttons === 0) end(); });
+  }
+
+  function setTool(tool) {
+    hw.tool = tool;
+    document.querySelectorAll('#hwTools .toolbtn').forEach(b => {
+      b.classList.toggle('active', b.dataset.tool === tool);
+    });
+    hw.els.forEach(el => {
+      el.edit.style.cursor = tool === 'none' ? 'default' : 'crosshair';
+      el.edit.classList.toggle('drawing', tool !== 'none');
+    });
+  }
+
+  /* ---------- Studio öffnen / schließen ---------- */
+
+  function syncStudioControls() {
+    const s = hw.settings;
+    $('hwText').value = hw.text;
+    $('hwPaper').value = s.paper;
+    $('hwPaperColor').value = s.paperColor;
+    $('hwInk').value = s.ink;
+    $('hwSize').value = s.fontSize;
+    $('hwSizeVal').textContent = s.fontSize;
+    $('hwLine').value = s.lineSpacing;
+    $('hwLineVal').textContent = Number(s.lineSpacing).toFixed(2);
+    $('hwJitter').value = s.jitter;
+    $('hwJitterVal').textContent = s.jitter;
+    $('hwNoteTitle').textContent = hw.page ? '· ' + (hw.page.title || 'Ohne Titel') : '';
+    refreshStudioFontSelect();
+  }
+
+  function refreshStudioFontSelect() {
+    const sel = $('hwFont');
+    sel.innerHTML = '';
+    const sys = document.createElement('option');
+    sys.value = 'system';
+    sys.textContent = 'Standard (Schreibschrift)';
+    sel.appendChild(sys);
+    fonts.forEach(f => {
+      const o = document.createElement('option');
+      o.value = f.id;
+      o.textContent = f.name + ' (' + Object.keys(f.glyphs).length + ' Zeichen)';
+      sel.appendChild(o);
+    });
+    sel.value = getFontById(hw.settings.fontId) ? hw.settings.fontId : 'system';
+  }
+
+  function openHandwriting() {
+    if (!current) { $('newPage').click(); }
+    const p = current;
+    const stored = normalizeHandwriting(p.hw);
+
+    hw.page = p;
+    const hasStoredFont = !!(stored && stored.settings && stored.settings.fontId && getFontById(stored.settings.fontId));
+    hw.settings = Object.assign({}, DEFAULT_SETTINGS, stored ? stored.settings : {});
+    if (!hasStoredFont) hw.settings.fontId = getFontById(activeFontId) ? activeFontId : 'system';
+    hw.text = stored ? stored.text : (p.content || '');
+    if (!hw.text && p.content) hw.text = p.content;
+    hw.strokes = stored ? stored.strokes.slice() : [];
+    hw.seed = stored ? stored.seed : randomSeed();
+
+    hw.open = true;
+    $('hwView').classList.remove('hidden');
+    $('hwView').setAttribute('aria-hidden', 'false');
+    hw.zoom = clamp((($('hwPages').parentElement.clientWidth || PAGE_W) - 28) / PAGE_W, 0.35, 1);
+    syncStudioControls();
+    hw.layout = layoutHandwriting();
+    createPageEls(hw.layout.length);
+    renderPages();
+    applyZoom();
+    setTool('none');
+    saveHandwriting();
+  }
+
+  function closeHandwriting() {
+    saveHandwriting();
+    clearTimeout(hw.rebuildTimer);
+    hw.open = false;
+    hw.page = null;
+    $('hwView').classList.add('hidden');
+    $('hwView').setAttribute('aria-hidden', 'true');
+    renderList();
+  }
+
+  $('hwOpen').onclick = openHandwriting;
+  $('hwClose').onclick = closeHandwriting;
+
+  /* ---------- Studio-Bedienelemente ---------- */
+
+  $('hwText').oninput = () => {
+    hw.text = $('hwText').value;
+    clearTimeout(hw.rebuildTimer);
+    hw.rebuildTimer = setTimeout(() => rebuild(false), 500);
+  };
+
+  $('hwFromNote').onclick = () => {
+    if (!hw.page) return;
+    hw.text = hw.page.content || '';
+    $('hwText').value = hw.text;
+    rebuild(true);
+  };
+
+  $('hwGenerate').onclick = () => {
+    hw.text = $('hwText').value;
+    rebuild(true);
+  };
+
+  $('hwFont').onchange = e => {
+    hw.settings.fontId = e.target.value;
+    activeFontId = e.target.value;
+    localStorage.setItem(STORE_ACTIVE, activeFontId);
+    rebuild(false);
+  };
+
+  $('hwDesign').onclick = openDesigner;
+
+  $('hwPaper').onchange = e => { hw.settings.paper = e.target.value; scheduleRebuild(); };
+  $('hwPaperColor').oninput = e => { hw.settings.paperColor = e.target.value; scheduleRebuild(); };
+  $('hwInk').oninput = e => { hw.settings.ink = e.target.value; scheduleRebuild(); };
+
+  $('hwSize').oninput = e => {
+    hw.settings.fontSize = Number(e.target.value);
+    $('hwSizeVal').textContent = e.target.value;
+    scheduleRebuild();
+  };
+  $('hwLine').oninput = e => {
+    hw.settings.lineSpacing = Number(e.target.value);
+    $('hwLineVal').textContent = Number(e.target.value).toFixed(2);
+    scheduleRebuild();
+  };
+  $('hwJitter').oninput = e => {
+    hw.settings.jitter = Number(e.target.value);
+    $('hwJitterVal').textContent = e.target.value;
+    scheduleRebuild();
+  };
+
+  document.querySelectorAll('#hwTools .toolbtn').forEach(btn => {
+    btn.onclick = () => setTool(btn.dataset.tool);
+  });
+
+  $('hwBrush').oninput = e => { hw.brush = Number(e.target.value); };
+
+  $('hwUndo').onclick = () => {
+    if (!hw.strokes.length) return;
+    hw.strokes.pop();
+    renderPages();
+    saveHandwriting();
+  };
+
+  $('hwClearStrokes').onclick = () => {
+    if (!hw.strokes.length) return;
+    if (!confirm('Alle Stift-, Marker- und Radier-Striche dieser Handschrift löschen?')) return;
+    hw.strokes = [];
+    renderPages();
+    saveHandwriting();
+  };
+
+  $('hwZoomOut').onclick = () => { hw.zoom = clamp(hw.zoom - 0.1, 0.3, 2); applyZoom(); };
+  $('hwZoomIn').onclick = () => { hw.zoom = clamp(hw.zoom + 0.1, 0.3, 2); applyZoom(); };
+
+  /* ---------- Export: PNG & PDF ---------- */
+
+  function renderOffscreen(pageIndex, scale) {
+    const c = document.createElement('canvas');
+    c.width = Math.round(PAGE_W * scale);
+    c.height = Math.round(PAGE_H * scale);
+    const ctx = c.getContext('2d');
+    ctx.scale(scale, scale);
+    drawPaper(ctx);
+
+    const ink = document.createElement('canvas');
+    ink.width = c.width; ink.height = c.height;
+    const ictx = ink.getContext('2d');
+    ictx.scale(scale, scale);
+    drawOps(ictx, hw.layout[pageIndex] || [], hw.settings.ink);
+
+    const ed = document.createElement('canvas');
+    ed.width = c.width; ed.height = c.height;
+    const ectx = ed.getContext('2d');
+    ectx.scale(scale, scale);
+    replayStrokes(ictx, ectx, pageIndex);
+
+    ctx.drawImage(ink, 0, 0, PAGE_W, PAGE_H);
+    ctx.drawImage(ed, 0, 0, PAGE_W, PAGE_H);
+    return c;
+  }
+
+  function exportName(ext, index) {
+    const base = safeName(hw.page ? hw.page.title : 'Handschrift');
+    return base + '-handschrift' + (index !== undefined ? '-' + (index + 1) : '') + '.' + ext;
+  }
+
+  async function exportPng() {
+    if (!hw.layout.length) return alert('Es gibt noch keine Handschrift zum Exportieren.');
+    for (let i = 0; i < hw.layout.length; i++) {
+      const cv = renderOffscreen(i, 2);
+      const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+      downloadBlob(exportName('png', i), blob);
+      await new Promise(r => setTimeout(r, 400));
+    }
+  }
+
+  function jpegBytes(canvas) {
+    const url = canvas.toDataURL('image/jpeg', 0.92);
+    const bin = atob(url.slice(url.indexOf(',') + 1));
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  }
+
+  // Minimaler PDF-Schreiber: eine Seite pro Handschrift-Seite (JPEG-XObject)
+  function buildPdf(images) {
+    // images: [{ bytes, w, h }] – bereits als JPEG kodierte Seiten
+    const enc = new TextEncoder();
+    const ptW = 595.28;   // A4 in Punkten
+    const ptH = 841.89;
+    const n = images.length;
+
+    const objects = [null];
+    const pageNums = [];
+    let next = 3;
+    for (let i = 0; i < n; i++) { pageNums.push(next); next += 3; }
+
+    objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+    objects[2] = '<< /Type /Pages /Kids [' + pageNums.map(v => v + ' 0 R').join(' ') + '] /Count ' + n + ' >>';
+
+    for (let i = 0; i < n; i++) {
+      const img = images[i];
+      const p = pageNums[i], c = p + 1, im = p + 2;
+      objects[p] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + ptW + ' ' + ptH +
+        '] /Resources << /XObject << /Im0 ' + im + ' 0 R >> >> /Contents ' + c + ' 0 R >>';
+
+      const stream = 'q\n' + ptW + ' 0 0 ' + ptH + ' 0 0 cm\n/Im0 Do\nQ\n';
+      objects[c] = '<< /Length ' + stream.length + ' >>\nstream\n' + stream + 'endstream';
+
+      objects[im] = {
+        bytes: img.bytes,
+        dict: '<< /Type /XObject /Subtype /Image /Width ' + img.w + ' /Height ' + img.h +
+          ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + img.bytes.length + ' >>'
+      };
+    }
+
+    const chunks = [];
+    let len = 0;
+    function put(data) {
+      const u8 = typeof data === 'string' ? enc.encode(data) : data;
+      chunks.push(u8);
+      len += u8.length;
+    }
+
+    put('%PDF-1.4\n%\u00E2\u00E3\u00CF\u00D3\n');
+
+    const offsets = [];
+    for (let i = 1; i < objects.length; i++) {
+      offsets[i] = len;
+      put(i + ' 0 obj\n');
+      const o = objects[i];
+      if (typeof o === 'string') {
+        put(o + '\n');
+      } else if (o.bytes) {
+        put(o.dict + '\nstream\n');
+        put(o.bytes);
+        put('\nendstream\n');
+      } else {
+        put(o.str + '\n');
+      }
+      put('endobj\n');
+    }
+
+    const xref = len;
+    put('xref\n0 ' + objects.length + '\n0000000000 65535 f \n');
+    for (let i = 1; i < objects.length; i++) {
+      put(String(offsets[i]).padStart(10, '0') + ' 00000 n \n');
+    }
+    put('trailer\n<< /Size ' + objects.length + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
+
+    return new Blob(chunks, { type: 'application/pdf' });
+  }
+
+  function exportPdf() {
+    if (!hw.layout.length) return alert('Es gibt noch keine Handschrift zum Exportieren.');
+    const images = [];
+    for (let i = 0; i < hw.layout.length; i++) {
+      const cv = renderOffscreen(i, 2);
+      images.push({ bytes: jpegBytes(cv), w: cv.width, h: cv.height });
+      cv.width = 0; cv.height = 0; // Speicher sofort freigeben
+    }
+    downloadBlob(exportName('pdf'), buildPdf(images));
+  }
+
+  $('hwPng').onclick = exportPng;
+  $('hwPdf').onclick = exportPdf;
+
+  /* ============================================================
+     SCHRIFT-DESIGNER
+     ============================================================ */
+
+  const fd = {
+    font: null,
+    char: 'A',
+    variant: 0,
+    strokes: [],
+    drawing: null
+  };
+
+  function openDesigner() {
+    if (!fonts.length) {
+      const f = { id: makeId(), name: 'Meine Handschrift', boxW: BOX_W, boxH: BOX_H, glyphs: {} };
+      fonts.push(f);
+      saveFonts();
+    }
+    fd.font = getFontById(hw.settings.fontId) || fonts[0];
+    hw.settings.fontId = fd.font.id;
+    activeFontId = fd.font.id;
+    localStorage.setItem(STORE_ACTIVE, activeFontId);
+    $('fontView').classList.remove('hidden');
+    $('fontView').setAttribute('aria-hidden', 'false');
+    renderDesigner();
+  }
+
+  function closeDesigner() {
+    saveFonts();
+    $('fontView').classList.add('hidden');
+    $('fontView').setAttribute('aria-hidden', 'true');
+    refreshStudioFontSelect();
+    rebuild(false);
+  }
+
+  function renderDesigner() {
+    const f = fd.font;
+    if (!f) return;
+
+    const sel = $('fontSelect');
+    sel.innerHTML = '';
+    fonts.forEach(font => {
+      const o = document.createElement('option');
+      o.value = font.id;
+      o.textContent = font.name;
+      sel.appendChild(o);
+    });
+    sel.value = f.id;
+    $('fontName').value = f.name;
+    $('fontTitleSmall').textContent = '· ' + f.name;
+
+    const drawn = Object.keys(f.glyphs).filter(ch => (f.glyphs[ch] || []).length).length;
+    $('fontProgress').textContent = drawn + ' von ' + ALL_CHARS.length + ' Zeichen';
+
+    renderFontPreview();
+
+    const grid = $('charGrid');
+    grid.innerHTML = '';
+    CHARSET_GROUPS.forEach(group => {
+      const section = document.createElement('div');
+      section.className = 'char-group';
+      const h = document.createElement('h4');
+      h.textContent = group.label;
+      section.appendChild(h);
+
+      const wrap = document.createElement('div');
+      wrap.className = 'char-grid';
+      group.chars.forEach(ch => {
+        const variants = f.glyphs[ch] || [];
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'char-btn' + (variants.length ? ' drawn' : '');
+        b.textContent = ch;
+        if (variants.length) {
+          const cnt = document.createElement('span');
+          cnt.className = 'count';
+          cnt.textContent = variants.length + '×';
+          b.appendChild(cnt);
+        }
+        b.onclick = () => openGlyph(ch);
+        wrap.appendChild(b);
+      });
+      section.appendChild(wrap);
+      grid.appendChild(section);
+    });
+  }
+
+  // Vorschau: der eingegebene Text in der eigenen Schrift
+  function renderFontPreview() {
+    const c = $('fontPreview');
+    if (!c || !fd.font) return;
+    const W = 700, H = 170;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (c.width !== Math.round(W * dpr)) {
+      c.width = Math.round(W * dpr);
+      c.height = Math.round(H * dpr);
+    }
+    const ctx = c.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#fffdf6';
+    ctx.fillRect(0, 0, W, H);
+
+    const text = ($('fontPreviewText').value || '').slice(0, 400);
+    const size = 36;
+    const scale = size / (fd.font.boxH || BOX_H);
+    const fstr = fallbackFont(size);
+    const ink = '#1b2a6b';
+    const maxW = W - 48;
+    const lineH = size * 1.3;
+    let x = 24;
+    let baseline = 56;
+
+    for (const ch of text) {
+      if (ch === '\n') { x = 24; baseline += lineH; continue; }
+      if (baseline > H - 14) break;
+
+      if (ch === ' ') {
+        x += size * 0.34;
+        if (x > maxW) { x = 24; baseline += lineH; }
+        continue;
+      }
+
+      const variants = fd.font.glyphs[ch];
+      if (variants && variants.length) {
+        const g = variants[0];
+        const gw = g.w * scale;
+        const gh = g.h * scale;
+        if (x + gw > maxW) { x = 24; baseline += lineH; }
+        if (baseline > H - 14) break;
+        ctx.drawImage(glyphBitmap(g, ink), x, baseline - g.base * scale, gw, gh);
+        x += gw + size * 0.05;
+      } else {
+        ctx.font = fstr;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        const tw = ctx.measureText(ch).width;
+        if (x + tw > maxW) { x = 24; baseline += lineH; }
+        if (baseline > H - 14) break;
+        ctx.fillStyle = 'rgba(120, 128, 160, 0.8)'; // Ersatzschrift leicht gedimmt
+        ctx.fillText(ch, x, baseline);
+        x += tw;
+      }
+    }
+  }
+
+  $('fontPreviewText').oninput = renderFontPreview;
+
+  /* ---------- Zeichen-Editor ---------- */
+
+  function openGlyph(ch) {
+    fd.char = ch;
+    fd.variant = 0;
+    const variants = fd.font.glyphs[ch] || [];
+    fd.strokes = deepCopyStrokes(variants[0] ? variants[0].strokes : []);
+    $('glyphTitle').textContent = ch;
+    $('glyphHint').textContent = '';
+    $('glyphModal').classList.remove('hidden');
+    updateVariantRow();
+    updateGhost();
+    redrawGlyphCanvas();
+  }
+
+  function deepCopyStrokes(strokes) {
+    return (strokes || []).map(st => ({ s: st.s, pts: st.pts.map(p => [p[0], p[1]]) }));
+  }
+
+  function glyphVariants() {
+    return fd.font.glyphs[fd.char] || [];
+  }
+
+  function updateVariantRow() {
+    const row = $('glyphVariants');
+    row.innerHTML = '';
+    const variants = glyphVariants();
+
+    for (let i = 0; i < 3; i++) {
+      const has = !!variants[i];
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'variant' + (i === fd.variant ? ' active' : '');
+      btn.title = has ? 'Variante ' + (i + 1) : 'Neue Variante';
+
+      if (i === fd.variant && fd.strokes.length) {
+        const c = document.createElement('canvas');
+        c.width = 144; c.height = 108;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#fffdf6';
+        ctx.fillRect(0, 0, 144, 108);
+        drawGlyphStrokes(ctx, fd.strokes, 144 / BOX_W, '#1b2a6b');
+        btn.appendChild(c);
+      } else if (has) {
+        const c = document.createElement('canvas');
+        c.width = 144; c.height = 108;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#fffdf6';
+        ctx.fillRect(0, 0, 144, 108);
+        drawGlyphStrokes(ctx, variants[i].strokes, 144 / BOX_W, '#1b2a6b');
+        btn.appendChild(c);
+      } else {
+        const plus = document.createElement('span');
+        plus.textContent = '+';
+        plus.style.cssText = 'font-size:22px;color:#5b6bd6;line-height:54px';
+        btn.appendChild(plus);
+      }
+
+      if (has) {
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'del';
+        del.textContent = '×';
+        del.title = 'Variante löschen';
+        del.onclick = e => {
+          e.stopPropagation();
+          deleteVariant(i);
+        };
+        btn.appendChild(del);
+      }
+
+      btn.onclick = () => selectVariant(i);
+      row.appendChild(btn);
+    }
+  }
+
+  function drawGlyphStrokes(ctx, strokes, scale, color) {
+    ctx.save();
+    ctx.scale(scale, scale);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const st of strokes) {
+      ctx.lineWidth = st.s || 3;
+      const pts = st.pts;
+      if (!pts || !pts.length) continue;
+      if (pts.length === 1) {
+        ctx.beginPath();
+        ctx.arc(pts[0][0], pts[0][1], (st.s || 3) / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function selectVariant(i) {
+    if (fd.strokes.length) saveGlyph(true);
+    fd.variant = i;
+    const variants = glyphVariants();
+    fd.strokes = variants[i] ? deepCopyStrokes(variants[i].strokes) : [];
+    updateVariantRow();
+    redrawGlyphCanvas();
+  }
+
+  function deleteVariant(i) {
+    const variants = glyphVariants();
+    if (!variants[i]) return;
+    variants.splice(i, 1);
+    if (!variants.length) delete fd.font.glyphs[fd.char];
+    fd.variant = Math.max(0, fd.variant - (i <= fd.variant ? 1 : 0));
+    fd.strokes = [];
+    saveFonts();
+    updateVariantRow();
+    renderDesigner();
+  }
+
+  function updateGhost() {
+    const c = $('ghostCanvas');
+    const W = Math.round(BOX_W * 2);
+    const H = Math.round(BOX_H * 2);
+    if (c.width !== W) { c.width = W; c.height = H; }
+    const ctx = c.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(2, 2);
+    ctx.fillStyle = '#fffdf6';
+    ctx.fillRect(0, 0, BOX_W, BOX_H);
+
+    // Führunglinien
+    ctx.strokeStyle = 'rgba(64, 96, 160, 0.28)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(24, BASE_Y); ctx.lineTo(BOX_W - 24, BASE_Y);
+    ctx.stroke();
+
+    ctx.setLineDash([6, 6]);
+    ctx.strokeStyle = 'rgba(64, 96, 160, 0.20)';
+    ctx.beginPath();
+    ctx.moveTo(24, 60); ctx.lineTo(BOX_W - 24, 60);      // Oberlänge
+    ctx.moveTo(24, 336); ctx.lineTo(BOX_W - 24, 336);    // Unterlänge
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // blasses Vorbild: Kapitalhöhe reicht bis zur Oberlinie
+    ctx.fillStyle = 'rgba(30, 40, 90, 0.09)';
+    let px = 290;
+    ctx.font = px + 'px "Bradley Hand","Segoe Script","Comic Sans MS",cursive';
+    const tw = ctx.measureText(fd.char).width;
+    if (tw > BOX_W - 90) {
+      px = Math.max(80, Math.floor(px * (BOX_W - 90) / tw));
+      ctx.font = px + 'px "Bradley Hand","Segoe Script","Comic Sans MS",cursive';
+    }
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(fd.char, BOX_W / 2, BASE_Y);
+  }
+
+  function redrawGlyphCanvas() {
+    const c = $('glyphCanvas');
+    const W = Math.round(BOX_W * 2);
+    const H = Math.round(BOX_H * 2);
+    if (c.width !== W) { c.width = W; c.height = H; }
+    const ctx = c.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    drawGlyphStrokes(ctx, fd.strokes, 2, '#1b2a6b');
+  }
+
+  function glyphPoint(e) {
+    const c = $('glyphCanvas');
+    const rect = c.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (BOX_W / rect.width);
+    const y = (e.clientY - rect.top) * (BOX_H / rect.height);
+    return [Math.round(clamp(x, 0, BOX_W) * 10) / 10, Math.round(clamp(y, 0, BOX_H) * 10) / 10];
+  }
+
+  (function bindGlyphDrawing() {
+    const c = $('glyphCanvas');
+    let live = null;
+
+    function paint(pts) {
+      const ctx = c.getContext('2d');
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.save();
+      ctx.scale(2, 2);
+      ctx.strokeStyle = '#1b2a6b';
+      ctx.fillStyle = '#1b2a6b';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = live.s;
+      if (pts.length === 1) {
+        ctx.beginPath();
+        ctx.arc(pts[0][0], pts[0][1], live.s / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    c.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      try { c.setPointerCapture(e.pointerId); } catch {}
+      const pt = glyphPoint(e);
+      live = { s: Number($('glyphWidth').value) || 3, pts: [pt] };
+      paint([pt]);
+    });
+
+    c.addEventListener('pointermove', e => {
+      if (!live) return;
+      e.preventDefault();
+      const pt = glyphPoint(e);
+      const last = live.pts[live.pts.length - 1];
+      if (Math.abs(pt[0] - last[0]) < 0.6 && Math.abs(pt[1] - last[1]) < 0.6) return;
+      live.pts.push(pt);
+      paint(live.pts.slice(-2));
+    });
+
+    function end() {
+      if (!live) return;
+      if (live.pts.length) fd.strokes.push(live);
+      live = null;
+      updateVariantRow();
+    }
+    c.addEventListener('pointerup', end);
+    c.addEventListener('pointercancel', end);
+    c.addEventListener('pointerout', e => { if (e.pointerType === 'mouse' && e.buttons === 0) end(); });
+  })();
+
+  function simplify(points, minDist) {
+    if (points.length <= 2) return points;
+    const out = [points[0]];
+    for (let i = 1; i < points.length - 1; i++) {
+      const p = points[i];
+      const last = out[out.length - 1];
+      if (Math.hypot(p[0] - last[0], p[1] - last[1]) >= minDist) out.push(p);
+    }
+    out.push(points[points.length - 1]);
+    return out;
+  }
+
+  function glyphFromStrokes(strokes) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, maxS = 1;
+    for (const st of strokes) {
+      maxS = Math.max(maxS, st.s || 3);
+      for (const p of st.pts) {
+        if (p[0] < minX) minX = p[0];
+        if (p[1] < minY) minY = p[1];
+        if (p[0] > maxX) maxX = p[0];
+        if (p[1] > maxY) maxY = p[1];
+      }
+    }
+    if (!isFinite(minX)) return null;
+    const pad = maxS / 2 + 1;
+    minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+    return {
+      x: Math.round(minX * 10) / 10,
+      y: Math.round(minY * 10) / 10,
+      w: Math.round((maxX - minX) * 10) / 10,
+      h: Math.round((maxY - minY) * 10) / 10,
+      base: Math.round((BASE_Y - minY) * 10) / 10,
+      strokes: strokes.map(st => ({
+        s: st.s || 3,
+        pts: simplify(st.pts, 1.8).map(p => [Math.round(p[0] * 10) / 10, Math.round(p[1] * 10) / 10])
+      }))
+    };
+  }
+
+  function saveGlyph(silent) {
+    const strokes = fd.strokes.filter(st => st.pts && st.pts.length);
+    if (!strokes.length) {
+      if (!silent) $('glyphHint').textContent = 'Noch nichts gezeichnet.';
+      return false;
+    }
+    const glyph = glyphFromStrokes(strokes);
+    if (!glyph) return false;
+
+    if (!fd.font.glyphs[fd.char]) fd.font.glyphs[fd.char] = [];
+    const arr = fd.font.glyphs[fd.char];
+    while (arr.length <= fd.variant) arr.push(null);
+    arr[fd.variant] = glyph;
+    // Lücken schließen
+    fd.font.glyphs[fd.char] = arr.filter(Boolean);
+
+    saveFonts();
+    updateVariantRow();
+    renderFontPreview();
+    if (!silent) {
+      $('glyphHint').textContent = 'Gespeichert ✓';
+      setTimeout(() => { if ($('glyphHint')) $('glyphHint').textContent = ''; }, 1800);
+    }
+    return true;
+  }
+
+  function glyphNavigate(delta) {
+    if (fd.strokes.length) saveGlyph(true);
+    const idx = ALL_CHARS.indexOf(fd.char);
+    const next = ALL_CHARS[(idx + delta + ALL_CHARS.length) % ALL_CHARS.length];
+    openGlyph(next);
+    renderDesigner();
+  }
+
+  $('glyphWidth').oninput = () => {};
+  $('glyphUndo').onclick = () => {
+    if (!fd.strokes.length) return;
+    fd.strokes.pop();
+    redrawGlyphCanvas();
+    updateVariantRow();
+  };
+  $('glyphClear').onclick = () => {
+    fd.strokes = [];
+    redrawGlyphCanvas();
+    updateVariantRow();
+  };
+  $('glyphPrev').onclick = () => glyphNavigate(-1);
+  $('glyphNext').onclick = () => glyphNavigate(1);
+  $('glyphSave').onclick = () => {
+    if (saveGlyph(false)) renderDesigner();
+  };
+
+  $('glyphSaveNext').onclick = () => {
+    if (!saveGlyph(true)) {
+      $('glyphHint').textContent = 'Noch nichts gezeichnet.';
+      return;
+    }
+    renderDesigner();
+    // zum nächsten Zeichen ohne Variante springen, sonst einfach weiter
+    const idx = ALL_CHARS.indexOf(fd.char);
+    const ordered = ALL_CHARS.slice(idx + 1).concat(ALL_CHARS.slice(0, idx));
+    const openChar = ordered.find(ch => !(fd.font.glyphs[ch] || []).length);
+    openGlyph(openChar || ALL_CHARS[(idx + 1) % ALL_CHARS.length]);
+  };
+  $('glyphClose').onclick = () => {
+    if (fd.strokes.length) saveGlyph(true);
+    $('glyphModal').classList.add('hidden');
+    renderDesigner();
+  };
+
+  /* ---------- Schrift verwalten ---------- */
+
+  $('fontSelect').onchange = e => {
+    const f = getFontById(e.target.value);
+    if (!f) return;
+    fd.font = f;
+    hw.settings.fontId = f.id;
+    activeFontId = f.id;
+    localStorage.setItem(STORE_ACTIVE, activeFontId);
+    renderDesigner();
+  };
+
+  $('fontName').oninput = e => {
+    if (!fd.font) return;
+    fd.font.name = e.target.value || 'Meine Handschrift';
+    saveFonts();
+    $('fontTitleSmall').textContent = '· ' + fd.font.name;
+    const opt = [...$('fontSelect').options].find(o => o.value === fd.font.id);
+    if (opt) opt.textContent = fd.font.name;
+    clearTimeout($('fontName')._t);
+    $('fontName')._t = setTimeout(saveFonts, 300);
+  };
+
+  $('fontNew').onclick = () => {
+    const name = prompt('Name der neuen Schrift:', 'Meine Handschrift ' + (fonts.length + 1));
+    if (name === null) return;
+    const f = { id: makeId(), name: name.trim() || 'Meine Handschrift', boxW: BOX_W, boxH: BOX_H, glyphs: {} };
+    fonts.push(f);
+    fd.font = f;
+    hw.settings.fontId = f.id;
+    activeFontId = f.id;
+    localStorage.setItem(STORE_ACTIVE, activeFontId);
+    saveFonts();
+    renderDesigner();
+  };
+
+  $('fontDelete').onclick = () => {
+    if (!fd.font) return;
+    if (fonts.length <= 1) { alert('Mindestens eine Schrift muss bleiben.'); return; }
+    if (!confirm('Schrift „' + fd.font.name + '“ wirklich löschen?')) return;
+    fonts = fonts.filter(f => f !== fd.font);
+    fd.font = fonts[0];
+    hw.settings.fontId = fd.font.id;
+    activeFontId = fd.font.id;
+    localStorage.setItem(STORE_ACTIVE, activeFontId);
+    saveFonts();
+    renderDesigner();
+  };
+
+  $('fontExport').onclick = () => {
+    if (!fd.font) return;
+    const data = {
+      format: 'orinotes-font',
+      version: 1,
+      name: fd.font.name,
+      boxW: fd.font.boxW,
+      boxH: fd.font.boxH,
+      glyphs: fd.font.glyphs
+    };
+    downloadFile(safeName(fd.font.name) + '.handschrift.json', data);
+  };
+
+  $('fontImport').onchange = async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      if (!data || !data.glyphs) throw new Error('invalid');
+      const f = {
+        id: makeId(),
+        name: data.name || (file.name.replace(/\.json$/i, '') || 'Importierte Schrift'),
+        boxW: data.boxW || BOX_W,
+        boxH: data.boxH || BOX_H,
+        glyphs: {}
+      };
+      for (const ch in data.glyphs) {
+        const arr = Array.isArray(data.glyphs[ch]) ? data.glyphs[ch] : [];
+        const clean = arr.filter(g => g && Array.isArray(g.strokes) && g.strokes.length)
+          .map(g => ({
+            x: Number(g.x) || 0,
+            y: Number(g.y) || 0,
+            w: Number(g.w) || 1,
+            h: Number(g.h) || 1,
+            base: Number(g.base) || 0,
+            strokes: g.strokes.map(st => ({ s: Number(st.s) || 3, pts: st.pts.map(p => [Number(p[0]) || 0, Number(p[1]) || 0]) }))
+          }));
+        if (clean.length) f.glyphs[ch] = clean;
+      }
+      if (!Object.keys(f.glyphs).length) throw new Error('empty');
+      fonts.push(f);
+      fd.font = f;
+      hw.settings.fontId = f.id;
+      activeFontId = f.id;
+      localStorage.setItem(STORE_ACTIVE, activeFontId);
+      saveFonts();
+      renderDesigner();
+      alert('Schrift „' + f.name + '“ importiert.');
+    } catch {
+      alert('Die Datei ist keine gültige Schriftsicherung.');
+    }
+  };
+
+  $('fontClose').onclick = closeDesigner;
+
+  /* ================= Start ================= */
 
   if (pages.length) openPage(pages[0]);
   else $('newPage').click();
+
+  // Tastatur: Esc schließt die Overlays
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (!$('glyphModal').classList.contains('hidden')) { $('glyphClose').click(); return; }
+    if (!$('fontView').classList.contains('hidden')) { closeDesigner(); return; }
+    if (!$('hwView').classList.contains('hidden')) closeHandwriting();
+  });
+
+  window.addEventListener('resize', () => {
+    if (!hw.open) return;
+    applyZoom();
+  });
 </script>
 </body>
 </html>
